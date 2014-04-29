@@ -1,45 +1,43 @@
 (function() {
 
-  var Environment = this.Environment = function(){};
+  var sync = Backbone.sync;
+  var ajax = Backbone.ajax;
+  var emulateHTTP = Backbone.emulateHTTP;
+  var emulateJSON = Backbone.emulateJSON;
+  var history = window.history;
+  var pushState = history.pushState;
+  var replaceState = history.replaceState;
 
-  _.extend(Environment.prototype, {
+  QUnit.testStart(function() {
+    var env = this.config.current.testEnvironment;
 
-    ajax: Backbone.ajax,
+    // We never want to actually call these during tests.
+    history.pushState = history.replaceState = function(){};
 
-    sync: Backbone.sync,
+    // Capture ajax settings for comparison.
+    Backbone.ajax = function(settings) {
+      env.ajaxSettings = settings;
+    };
 
-    emulateHTTP: Backbone.emulateHTTP,
-
-    emulateJSON: Backbone.emulateJSON,
-
-    setup: function() {
-      var env = this;
-
-      // Capture ajax settings for comparison.
-      Backbone.ajax = function(settings) {
-        env.ajaxSettings = settings;
+    // Capture the arguments to Backbone.sync for comparison.
+    Backbone.sync = function(method, model, options) {
+      env.syncArgs = {
+        method: method,
+        model: model,
+        options: options
       };
+      sync.apply(this, arguments);
+    };
 
-      // Capture the arguments to Backbone.sync for comparison.
-      Backbone.sync = function(method, model, options) {
-        env.syncArgs = {
-          method: method,
-          model: model,
-          options: options
-        };
-        env.sync.apply(this, arguments);
-      };
-    },
+  });
 
-    teardown: function() {
-      this.syncArgs = null;
-      this.ajaxSettings = null;
-      Backbone.sync = this.sync;
-      Backbone.ajax = this.ajax;
-      Backbone.emulateHTTP = this.emulateHTTP;
-      Backbone.emulateJSON = this.emulateJSON;
-    }
-
+  QUnit.testDone(function() {
+    Backbone.sync = sync;
+    Backbone.ajax = ajax;
+    Backbone.emulateHTTP = emulateHTTP;
+    Backbone.emulateJSON = emulateJSON;
+    history.pushState = pushState;
+    history.replaceState = replaceState;
   });
 
 })();
